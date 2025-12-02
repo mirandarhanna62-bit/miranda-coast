@@ -1,10 +1,20 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Menu, X, ShoppingBag } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import CartSheet from "./CartSheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -13,6 +23,11 @@ const Navbar = () => {
     { name: "Sobre", path: "/sobre" },
     { name: "Contato", path: "/contato" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm shadow-soft">
@@ -36,23 +51,47 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            <Button variant="ghost" size="icon">
-              <ShoppingBag className="h-5 w-5" />
-            </Button>
+            
+            <CartSheet />
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate('/meus-pedidos')}>
+                    Meus Pedidos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate('/auth')}>
+                Entrar
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? (
-              <X className="h-6 w-6 text-foreground" />
-            ) : (
-              <Menu className="h-6 w-6 text-foreground" />
-            )}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <CartSheet />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? (
+                <X className="h-6 w-6 text-foreground" />
+              ) : (
+                <Menu className="h-6 w-6 text-foreground" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -68,6 +107,31 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            {user ? (
+              <>
+                <Link
+                  to="/meus-pedidos"
+                  className="block text-sm font-medium text-foreground hover:text-primary transition-smooth"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Meus Pedidos
+                </Link>
+                <button
+                  onClick={() => { handleSignOut(); setIsOpen(false); }}
+                  className="block text-sm font-medium text-foreground hover:text-primary transition-smooth"
+                >
+                  Sair
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/auth"
+                className="block text-sm font-medium text-primary"
+                onClick={() => setIsOpen(false)}
+              >
+                Entrar
+              </Link>
+            )}
           </div>
         )}
       </div>
