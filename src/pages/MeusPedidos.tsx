@@ -6,7 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, ShoppingBag } from 'lucide-react';
+import { Loader2, Package, ShoppingBag, CreditCard } from 'lucide-react';
+import { toast } from 'sonner';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -17,11 +18,23 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  pending: 'Pendente',
+  pending: 'Aguardando Pagamento',
   processing: 'Processando',
   shipped: 'Enviado',
   delivered: 'Entregue',
   cancelled: 'Cancelado',
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  pending: 'Aguardando Pagamento',
+  approved: 'Pago',
+  rejected: 'Recusado',
+};
+
+const paymentStatusColors: Record<string, string> = {
+  pending: 'bg-orange-100 text-orange-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
 };
 
 const MeusPedidos = () => {
@@ -66,6 +79,58 @@ const MeusPedidos = () => {
     });
   };
 
+  const handlePayOrder = async (orderId: string, total: number) => {
+    try {
+      const baseUrl = window.location.origin;
+      
+      // Get order items for payment
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+      
+      if (itemsError) throw itemsError;
+
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
+        body: {
+          items: orderItems?.map(item => ({
+            id: item.product_id,
+            title: item.product_name,
+            quantity: item.quantity,
+            unit_price: Number(item.price),
+            picture_url: item.product_image || '',
+          })) || [],
+          payer: {
+            email: user!.email,
+            name: user!.user_metadata?.full_name || '',
+          },
+          external_reference: orderId,
+          back_urls: {
+            success: `${baseUrl}/pedido/${orderId}?status=success`,
+            failure: `${baseUrl}/pedido/${orderId}?status=failure`,
+            pending: `${baseUrl}/pedido/${orderId}?status=pending`,
+          },
+        },
+      });
+
+      if (paymentError) {
+        console.error('Payment error:', paymentError);
+        toast.error('Erro ao criar pagamento. Tente novamente.');
+        return;
+      }
+
+      const redirectUrl = paymentData.sandbox_init_point || paymentData.init_point;
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      } else {
+        toast.error('Erro ao obter link de pagamento');
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast.error('Erro ao processar pagamento');
+    }
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -90,41 +155,64 @@ const MeusPedidos = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order: any) => (
-              <Card key={order.id} className="hover:shadow-medium transition-smooth">
-                <CardHeader className="pb-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="text-lg font-medium">
-                      Pedido #{order.id.slice(0, 8)}
-                    </CardTitle>
-                    <Badge className={statusColors[order.status] || 'bg-gray-100 text-gray-800'}>
-                      {statusLabels[order.status] || order.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">{formatDate(order.created_at)}</p>
+            {orders.map((order: any) => {
+              const isPendingPayment = order.payment_status === 'pending' || !order.payment_status;
+              
+              return (
+                <Card key={order.id} className="hover:shadow-medium transition-smooth">
+                  <CardHeader className="pb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <CardTitle className="text-lg font-medium">
+                        Pedido #{order.id.slice(0, 8)}
+                      </CardTitle>
                       <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {order.tracking_code ? `Rastreio: ${order.tracking_code}` : 'Aguardando envio'}
-                        </span>
+                        <Badge className={paymentStatusColors[order.payment_status] || paymentStatusColors.pending}>
+                          {paymentStatusLabels[order.payment_status] || 'Aguardando Pagamento'}
+                        </Badge>
+                        {!isPendingPayment && (
+                          <Badge className={statusColors[order.status] || 'bg-gray-100 text-gray-800'}>
+                            {statusLabels[order.status] || order.status}
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-semibold text-primary">{formatPrice(order.total)}</p>
-                      <Link to={`/pedido/${order.id}`}>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Ver Detalhes
-                        </Button>
-                      </Link>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">{formatDate(order.created_at)}</p>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {order.tracking_code ? `Rastreio: ${order.tracking_code}` : 'Aguardando envio'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-2">
+                        <p className="text-lg font-semibold text-primary">{formatPrice(order.total)}</p>
+                        <div className="flex items-center gap-2">
+                          {isPendingPayment && (
+                            <Button 
+                              size="sm" 
+                              className="bg-[#009ee3] hover:bg-[#007eb5]"
+                              onClick={() => handlePayOrder(order.id, order.total)}
+                            >
+                              <CreditCard className="h-4 w-4 mr-2" />
+                              Pagar
+                            </Button>
+                          )}
+                          <Link to={`/pedido/${order.id}`}>
+                            <Button variant="outline" size="sm">
+                              Ver Detalhes
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
