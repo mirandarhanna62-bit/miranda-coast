@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Edit, Package, Megaphone, ShieldAlert, ClipboardList } from 'lucide-react';
 import { OrdersTab } from '@/components/admin/OrdersTab';
+import { ImageUpload } from '@/components/admin/ImageUpload';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const categories = ["Vestidos", "Conjuntos", "Blusas", "Croppeds", "Bodys", "Calças", "Saias"];
 
@@ -396,11 +408,21 @@ const Admin = () => {
                           />
                         </div>
                         <div className="col-span-2">
-                          <Label>URLs das Imagens (separadas por vírgula)</Label>
+                          <Label>Imagens do Produto</Label>
+                          <ImageUpload
+                            value={productForm.images.split(',').map(s => s.trim()).filter(Boolean)}
+                            onChange={(urls) => setProductForm(p => ({ ...p, images: urls.join(', ') }))}
+                            maxImages={5}
+                            folder="products"
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Ou cole URLs separadas por vírgula:
+                          </p>
                           <Textarea
                             placeholder="https://exemplo.com/imagem1.jpg, https://exemplo.com/imagem2.jpg"
                             value={productForm.images}
                             onChange={(e) => setProductForm(p => ({ ...p, images: e.target.value }))}
+                            className="mt-1"
                           />
                         </div>
                         <div className="col-span-2 flex items-center gap-2">
@@ -462,14 +484,30 @@ const Admin = () => {
                           <Button variant="ghost" size="icon" onClick={() => openEditProduct(product)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteProduct.mutate(product.id)}
-                            disabled={deleteProduct.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir produto?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita. O produto "{product.name}" será removido permanentemente.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteProduct.mutate(product.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     ))}
@@ -511,11 +549,21 @@ const Admin = () => {
                         />
                       </div>
                       <div>
-                        <Label>URL da Imagem</Label>
+                        <Label>Imagem do Anúncio</Label>
+                        <ImageUpload
+                          value={announcementForm.image_url ? [announcementForm.image_url] : []}
+                          onChange={(urls) => setAnnouncementForm(a => ({ ...a, image_url: urls[0] || '' }))}
+                          maxImages={1}
+                          folder="announcements"
+                        />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Ou cole a URL da imagem:
+                        </p>
                         <Input
                           placeholder="https://exemplo.com/banner.jpg"
                           value={announcementForm.image_url}
                           onChange={(e) => setAnnouncementForm(a => ({ ...a, image_url: e.target.value }))}
+                          className="mt-1"
                         />
                       </div>
                       <div>
