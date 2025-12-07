@@ -11,7 +11,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { ImageUpload } from '@/components/ImageUpload';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2, Edit, Package, Megaphone, ShieldAlert, ClipboardList, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
 import { OrdersTab } from '@/components/admin/OrdersTab';
