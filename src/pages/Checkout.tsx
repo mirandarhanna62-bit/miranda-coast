@@ -370,17 +370,18 @@ const Checkout = () => {
               .filter(Boolean)
               .join(' | ') || undefined,
           })),
-          payer: {
-            email: payerEmail,
-            name: payerName,
-            document: payerDocument.replace(/\D/g, ''),
-            document_type: identificationType,
-            statement_descriptor: 'Miranda Coast',
-          },
-          back_urls: {
-            success: window.location.origin + '/pedido/' + order.id,
-            failure: window.location.origin + '/pedido/' + order.id,
-            pending: window.location.origin + '/pedido/' + order.id,
+            payer: {
+              email: payerEmail,
+              name: payerName,
+              document: payerDocument.replace(/\D/g, ''),
+              document_type: identificationType,
+              statement_descriptor: 'Miranda Coast',
+            },
+            shipping_cost: selectedShipping.price || 0,
+            back_urls: {
+              success: window.location.origin + '/pedido/' + order.id,
+              failure: window.location.origin + '/pedido/' + order.id,
+              pending: window.location.origin + '/pedido/' + order.id,
             notification: MERCADO_PAGO_WEBHOOK,
           },
           payment_method_id: paymentMethodId,

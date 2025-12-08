@@ -36,14 +36,30 @@ serve(async (req) => {
       payment_method_id,
       token,
       installments,
+      shipping_cost,
     } = body;
+
+    // Inclui frete (quando houver) no cálculo e envio ao MP
+    const shippingAmount = Number(shipping_cost) > 0 ? Number(shipping_cost) : 0;
+    const itemsWithShipping = [
+      ...items,
+      ...(shippingAmount > 0
+        ? [{
+            id: "shipping",
+            title: "Frete",
+            description: "Frete",
+            quantity: 1,
+            unit_price: shippingAmount,
+          }]
+        : []),
+    ];
 
     const isPreferenceFlow = !payment_method_id;
 
     if (
-      !items ||
-      !Array.isArray(items) ||
-      items.length === 0 ||
+      !itemsWithShipping ||
+      !Array.isArray(itemsWithShipping) ||
+      itemsWithShipping.length === 0 ||
       !payer ||
       !external_reference
     ) {
@@ -56,7 +72,7 @@ serve(async (req) => {
       );
     }
 
-    const invalidItem = items.find(
+    const invalidItem = itemsWithShipping.find(
       (item: any) =>
         !item.title ||
         !item.quantity ||
@@ -90,10 +106,10 @@ serve(async (req) => {
 
     if (isPreferenceFlow) {
       console.log("Creating payment preference for:", external_reference);
-      console.log("Items:", JSON.stringify(items));
+      console.log("Items:", JSON.stringify(itemsWithShipping));
 
       const preferenceData = {
-        items: items.map((item: any) => ({
+        items: itemsWithShipping.map((item: any) => ({
           id: item.id || item.product_name,
           title: item.title || item.product_name,
           description: item.description || item.title || "Produto",
@@ -152,7 +168,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     } else {
-      const transactionAmount = items.reduce(
+      const transactionAmount = itemsWithShipping.reduce(
         (sum: number, item: any) => sum + Number(item.unit_price) * Number(item.quantity),
         0,
       );
@@ -175,7 +191,7 @@ serve(async (req) => {
         statement_descriptor: payer.statement_descriptor || "MIRANDA COAST",
         notification_url: back_urls?.notification?.trim() || baseUrl,
         additional_info: {
-          items: items.map((item: any) => ({
+          items: itemsWithShipping.map((item: any) => ({
             id: item.id || item.product_name,
             title: item.title || item.product_name,
             description: item.description || item.title || "Produto",
