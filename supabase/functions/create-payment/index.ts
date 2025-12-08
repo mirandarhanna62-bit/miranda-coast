@@ -82,6 +82,9 @@ serve(async (req) => {
       requestUrlOrigin ||
       "https://example.com";
 
+    // Recomendação do MP: usar idempotência para evitar cobranças duplicadas
+    const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${external_reference}-${Date.now()}`;
+
     if (isPreferenceFlow) {
       console.log("Creating payment preference for:", external_reference);
       console.log("Items:", JSON.stringify(items));
@@ -116,6 +119,7 @@ serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
+          "X-Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify(preferenceData),
       });
@@ -192,6 +196,7 @@ serve(async (req) => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
+          "X-Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify(paymentPayload),
       });
