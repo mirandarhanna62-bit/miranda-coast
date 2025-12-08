@@ -639,63 +639,58 @@ const Checkout = () => {
                       <p className="text-sm text-muted-foreground">Geraremos um boleto. O pedido ficará pendente até o pagamento ser compensado.</p>
                     </TabsContent>
 
-                    <TabsContent value="card" className="space-y-4">
-                      {!MERCADO_PAGO_PUBLIC_KEY && (
-                        <p className="text-sm text-red-500">Defina VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar cartão.</p>
-                      )}
-                      <form id="payment-form" className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="form-cardholderName">Nome no cartão</Label>
-                            <Input id="form-cardholderName" />
-                          </div>
-                          <div>
-                            <Label htmlFor="form-cardholderEmail">Email do titular</Label>
-                            <Input id="form-cardholderEmail" />
-                          </div>
+                  <TabsContent value="card" className="space-y-4">
+                    {!MERCADO_PAGO_PUBLIC_KEY && (
+                      <p className="text-sm text-red-500">Defina VITE_MERCADO_PAGO_PUBLIC_KEY para habilitar cartão.</p>
+                    )}
+                    <form id="payment-form" className="space-y-3">
+                      <div>
+                        <Label htmlFor="form-cardholderName">Nome no cartão</Label>
+                        <Input id="form-cardholderName" />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="form-cardNumber">Número do cartão</Label>
+                        <Input id="form-cardNumber" />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label htmlFor="form-cardExpirationMonth">Mês</Label>
+                          <Input id="form-cardExpirationMonth" placeholder="MM" />
                         </div>
                         <div>
-                          <Label htmlFor="form-cardNumber">Número do cartão</Label>
-                          <Input id="form-cardNumber" />
+                          <Label htmlFor="form-cardExpirationYear">Ano</Label>
+                          <Input id="form-cardExpirationYear" placeholder="YY" />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <Label htmlFor="form-cardExpirationMonth">Mês</Label>
-                            <Input id="form-cardExpirationMonth" placeholder="MM" />
-                          </div>
-                          <div>
-                            <Label htmlFor="form-cardExpirationYear">Ano</Label>
-                            <Input id="form-cardExpirationYear" placeholder="YY" />
-                          </div>
-                          <div>
-                            <Label htmlFor="form-securityCode">CVV</Label>
-                            <Input id="form-securityCode" />
-                          </div>
+                        <div>
+                          <Label htmlFor="form-securityCode">CVV</Label>
+                          <Input id="form-securityCode" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="form-installments">Parcelas (até 12x com juros)</Label>
-                            <Input id="form-installments" defaultValue="1" />
-                          </div>
-                          <div>
-                            <Label htmlFor="form-identificationNumber">CPF/CNPJ do titular</Label>
-                            <Input id="form-identificationNumber" />
-                          </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label htmlFor="form-installments">Parcelas (até 12x com juros)</Label>
+                          <Input id="form-installments" defaultValue="1" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor="form-identificationType">Tipo doc</Label>
-                            <Input id="form-identificationType" placeholder="CPF/CNPJ" />
-                          </div>
-                          <div>
-                            <Label htmlFor="form-issuer">Emissor</Label>
-                            <Input id="form-issuer" />
-                          </div>
+                        <div className="opacity-0 h-0 overflow-hidden">
+                          {/* Hidden to keep SDK happy; email/document já coletados acima */}
+                          <Input id="form-cardholderEmail" defaultValue={payerEmail} />
                         </div>
-                        {cardFormError && <p className="text-sm text-red-500">{cardFormError}</p>}
-                      </form>
-                    </TabsContent>
-                  </Tabs>
+                      </div>
+
+                      {/* Hidden helpers required by MP form */}
+                      <div className="hidden">
+                        <Input id="form-identificationNumber" defaultValue={payerDocument} />
+                        <Input id="form-identificationType" defaultValue={payerDocument.replace(/\D/g, '').length > 11 ? 'CNPJ' : 'CPF'} />
+                        <Input id="form-issuer" />
+                      </div>
+
+                      {cardFormError && <p className="text-sm text-red-500">{cardFormError}</p>}
+                    </form>
+                  </TabsContent>
+                </Tabs>
 
                   {paymentResult && (
                     <div className="p-4 border rounded-md space-y-2 bg-secondary/40">
