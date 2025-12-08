@@ -655,21 +655,43 @@ const Admin = () => {
                             onChange={(e) => setProductForm(p => ({ ...p, colors: e.target.value }))}
                           />
                         </div>
-                        <div className="col-span-2">
-                          <Label>URLs das Imagens (separadas por vírgula)</Label>
-                          <Textarea
-                            placeholder="https://exemplo.com/imagem1.jpg, https://exemplo.com/imagem2.jpg"
-                            value={productForm.images}
-                            onChange={(e) => setProductForm(p => ({ ...p, images: e.target.value }))}
+                                                <div className="col-span-2 space-y-2">
+                          <Label>Imagens do produto</Label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                            {productForm.images.map((img, idx) => (
+                              <div key={idx} className="relative group">
+                                <img src={img} alt={`Imagem ${idx + 1}`} className="w-full h-28 object-cover rounded-lg" />
+                                <Button
+                                  size="icon"
+                                  variant="destructive"
+                                  className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition"
+                                  onClick={() =>
+                                    setProductForm(p => ({
+                                      ...p,
+                                      images: p.images.filter((_, i) => i !== idx),
+                                    }))
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                          <ImageUpload
+                            label=""
+                            folder="products"
+                            onImageUpload={(url) =>
+                              setProductForm(p => ({ ...p, images: [...p.images, url] }))
+                            }
+                            helperText="Envie uma imagem para adicionar ao produto"
                           />
+                          {productForm.images.length === 0 && (
+                            <p className="text-sm text-muted-foreground">
+                              Envie pelo menos uma imagem para o produto.
+                            </p>
+                          )}
                         </div>
-                        <div className="col-span-2 flex items-center gap-2">
-                          <Switch
-                            checked={productForm.is_active}
-                            onCheckedChange={(v) => setProductForm(p => ({ ...p, is_active: v }))}
-                          />
-                          <Label>Produto ativo</Label>
-                        </div>
+
                       </div>
                       <Button
                         className="w-full"
