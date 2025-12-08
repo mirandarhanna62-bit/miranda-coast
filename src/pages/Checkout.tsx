@@ -224,7 +224,9 @@ const Checkout = () => {
       
       if (data.options && data.options.length > 0) {
         setShippingOptions(data.options);
-        setSelectedShipping(data.options[0]);
+        // Seleciona primeiro serviço pago (Correios) se existir; senão, fallback para pickup
+        const firstPaid = data.options.find((opt: any) => !opt.pickup);
+        setSelectedShipping(firstPaid || data.options[0]);
         setStep(2);
         return true;
       } else {
