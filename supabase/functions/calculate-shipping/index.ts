@@ -169,14 +169,14 @@ serve(async (req: Request): Promise<Response> => {
     const pickupOption = {
       id: "pickup",
       name: "Retirar na loja",
-      company: "Miranda Costa Boutique",
+      company: "Miranda Coast",
       price: 0,
       delivery_time: 0,
       delivery_range: { min: 0, max: 0 },
       currency: "BRL",
       pickup: true,
       address: {
-        name: "Miranda Costa Boutique",
+        name: "Miranda Coast",
         street: "Rua Licurana",
         number: "806",
         district: "Tabuleiro",

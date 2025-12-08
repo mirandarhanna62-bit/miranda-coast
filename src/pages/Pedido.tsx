@@ -50,6 +50,15 @@ const Pedido = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const defaultWebhook = supabaseUrl
+    ? `${supabaseUrl.replace('.supabase.co', '.functions.supabase.co')}/payment-webhook`
+    : '';
+  const webhookUrl =
+    import.meta.env.VITE_MERCADO_PAGO_WEBHOOK_URL ||
+    defaultWebhook ||
+    `${window.location.origin}/api/webhook/mercado-pago`;
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
@@ -146,7 +155,7 @@ const Pedido = () => {
             success: `${window.location.origin}/pedido/${order.id}`,
             failure: `${window.location.origin}/pedido/${order.id}`,
             pending: `${window.location.origin}/pedido/${order.id}`,
-            notification: `${window.location.origin}/api/webhook/mercado-pago`,
+            notification: webhookUrl,
           },
         },
       });

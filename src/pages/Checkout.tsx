@@ -41,6 +41,14 @@ interface Address {
 }
 
 const ORIGIN_CEP = import.meta.env.VITE_ORIGIN_CEP || '01310100'; // CEP da loja/origem
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const DEFAULT_WEBHOOK_URL = SUPABASE_URL
+  ? `${SUPABASE_URL.replace('.supabase.co', '.functions.supabase.co')}/payment-webhook`
+  : '';
+const MERCADO_PAGO_WEBHOOK =
+  import.meta.env.VITE_MERCADO_PAGO_WEBHOOK_URL ||
+  DEFAULT_WEBHOOK_URL ||
+  `${window.location.origin}/api/webhook/mercado-pago`;
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -253,7 +261,7 @@ const Checkout = () => {
             success: window.location.origin + '/pedido/' + order.id,
             failure: window.location.origin + '/pedido/' + order.id,
             pending: window.location.origin + '/pedido/' + order.id,
-            notification: window.location.origin + '/api/webhook/mercado-pago',
+            notification: MERCADO_PAGO_WEBHOOK,
           },
         },
       });
