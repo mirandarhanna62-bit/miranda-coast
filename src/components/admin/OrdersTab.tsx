@@ -135,11 +135,10 @@ export const OrdersTab = () => {
         body: {
           order_id: orderId,
           service_id: serviceId,
-          from: senderInfo,
         },
       });
       if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (data) => {
@@ -418,7 +417,7 @@ export const OrdersTab = () => {
                       className="w-full"
                       onClick={() => generateLabel.mutate({
                         orderId: selectedOrder.id,
-                        serviceId: selectedOrder.shipping_service.id,
+                        serviceId: Number(selectedOrder.shipping_service?.id || selectedOrder.shipping_service?.service_id || 0),
                       })}
                       disabled={generateLabel.isPending}
                     >

@@ -1,0 +1,2 @@
+[functions.melhor-envio-webhook]
+verify_jwt = false

@@ -8,20 +8,7 @@ const corsHeaders = {
 
 interface LabelRequest {
   order_id: string;
-  service_id: number;
-  from: {
-    name: string;
-    phone: string;
-    email: string;
-    document: string;
-    address: string;
-    number: string;
-    complement?: string;
-    district: string;
-    city: string;
-    state_abbr: string;
-    postal_code: string;
-  };
+  service_id?: number;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -30,25 +17,25 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const MELHOR_ENVIO_API_KEY = Deno.env.get("MELHOR_ENVIO_API_KEY");
+    const MELHOR_ENVIO_API_KEY = Deno.env.get("MELHOR_ENVIO_API_TOKEN") || Deno.env.get("MELHOR_ENVIO_API_KEY");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!MELHOR_ENVIO_API_KEY) {
-      throw new Error("MELHOR_ENVIO_API_KEY not configured");
+      throw new Error("MELHOR_ENVIO_API_TOKEN not configured");
     }
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    const { order_id, service_id, from }: LabelRequest = await req.json();
+    const { order_id, service_id }: LabelRequest = await req.json();
 
     console.log("Generating label for order:", order_id);
 
     // Fetch order data
     const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('id', order_id)
+      .from("orders")
+      .select("*, order_items(*)")
+      .eq("id", order_id)
       .single();
 
     if (orderError || !order) {
@@ -56,15 +43,68 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const shippingAddress = order.shipping_address as any;
+    const orderItems = order.order_items || [];
+    // Tenta encontrar documento do destinatário em diferentes campos
+    const recipientDocumentRaw =
+      shippingAddress?.document ||
+      shippingAddress?.cpf ||
+      shippingAddress?.cnpj ||
+      order?.customer_document ||
+      order?.document ||
+      order?.cpf ||
+      order?.cnpj ||
+      order?.payer_document ||
+      order?.payment_document ||
+      "";
+    const recipientDocument = (recipientDocumentRaw || "").toString().replace(/\D/g, "");
 
-    // Calculate total dimensions (simplified)
-    const totalItems = order.order_items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    const packageData = {
-      width: 20,
-      height: Math.min(5 * totalItems, 100),
-      length: 30,
-      weight: 0.3 * totalItems,
+    // Sender from env
+    const sender = {
+      name: Deno.env.get("MELHOR_ENVIO_SENDER_NAME") || "Remetente",
+      phone: Deno.env.get("MELHOR_ENVIO_SENDER_PHONE") || "",
+      email: Deno.env.get("MELHOR_ENVIO_SENDER_EMAIL") || "",
+      document: Deno.env.get("MELHOR_ENVIO_SENDER_DOCUMENT") || "",
+      address: Deno.env.get("MELHOR_ENVIO_SENDER_STREET") || "",
+      number: Deno.env.get("MELHOR_ENVIO_SENDER_NUMBER") || "",
+      complement: Deno.env.get("MELHOR_ENVIO_SENDER_COMPLEMENT") || "",
+      district: Deno.env.get("MELHOR_ENVIO_SENDER_DISTRICT") || "",
+      city: Deno.env.get("MELHOR_ENVIO_SENDER_CITY") || "",
+      state_abbr: Deno.env.get("MELHOR_ENVIO_SENDER_STATE") || "",
+      postal_code: (Deno.env.get("MELHOR_ENVIO_SENDER_POSTAL_CODE") || "").replace(/\D/g, ""),
+  country: Deno.env.get("MELHOR_ENVIO_SENDER_COUNTRY") || "BR",
+  company_document: Deno.env.get("MELHOR_ENVIO_SENDER_COMPANY_DOCUMENT") || "",
+  state_register: Deno.env.get("MELHOR_ENVIO_SENDER_STATE_REGISTER") || "",
+  economic_activity_code: Deno.env.get("MELHOR_ENVIO_SENDER_CNAE") || "",
+};
+
+    // Dimensions/peso padrão
+    const defaultVolume = {
+      length: 16,
+      width: 11,
+      height: 3,
+      weight: 0.2,
     };
+    const volumes = [
+      {
+        length: defaultVolume.length,
+        width: defaultVolume.width,
+        height: defaultVolume.height,
+        weight: defaultVolume.weight,
+        insurance_value: order.total || order.subtotal || 0,
+      },
+    ];
+
+    const serviceToUse =
+      service_id ||
+      (order.shipping_service && (order.shipping_service as any).id) ||
+      (order.shipping_service && (order.shipping_service as any).service_id);
+
+    if (!serviceToUse) {
+      throw new Error("Serviço de frete não encontrado no pedido");
+    }
+    if (!recipientDocument) {
+      throw new Error("Documento do destinatário não encontrado no pedido/endereço");
+    }
 
     // 1. Add item to cart
     const cartResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/cart", {
@@ -76,25 +116,28 @@ serve(async (req: Request): Promise<Response> => {
         "User-Agent": "Miranda Costa (contato@mirandacosta.com.br)"
       },
       body: JSON.stringify({
-        service: service_id,
+        service: serviceToUse,
         from: {
-          name: from.name,
-          phone: from.phone,
-          email: from.email,
-          document: from.document,
-          address: from.address,
-          number: from.number,
-          complement: from.complement || "",
-          district: from.district,
-          city: from.city,
-          state_abbr: from.state_abbr,
-          postal_code: from.postal_code.replace(/\D/g, ""),
+          name: sender.name,
+          phone: sender.phone,
+          email: sender.email,
+          document: sender.document,
+          company_document: sender.company_document,
+          state_register: sender.state_register,
+          economic_activity_code: sender.economic_activity_code,
+          address: sender.address,
+          number: sender.number,
+          complement: sender.complement || "",
+          district: sender.district,
+          city: sender.city,
+          state_abbr: sender.state_abbr,
+          postal_code: sender.postal_code,
         },
         to: {
           name: shippingAddress.name || "Cliente",
           phone: shippingAddress.phone || "",
           email: shippingAddress.email || "",
-          document: shippingAddress.document || "",
+          document: recipientDocument,
           address: shippingAddress.street,
           number: shippingAddress.number,
           complement: shippingAddress.complement || "",
@@ -102,21 +145,27 @@ serve(async (req: Request): Promise<Response> => {
           city: shippingAddress.city,
           state_abbr: shippingAddress.state,
           postal_code: shippingAddress.cep.replace(/\D/g, ""),
+          country_id: shippingAddress.country_id || "BR",
         },
-        products: [{
-          name: `Pedido #${order_id.slice(0, 8)}`,
-          quantity: 1,
-          unitary_value: order.subtotal,
-        }],
-        volumes: [{
-          ...packageData,
-          insurance_value: order.subtotal,
-        }],
+        products: orderItems.map((item: any) => ({
+          name: item.product_name || "Item",
+          quantity: item.quantity || 1,
+          unitary_value: item.price || 0,
+        })),
+        volumes,
         options: {
-          insurance_value: order.subtotal,
+          insurance_value: order.total || order.subtotal || 0,
           receipt: false,
           own_hand: false,
           collect: false,
+          platform: Deno.env.get("MELHOR_ENVIO_PLATFORM") || "Miranda Coast",
+          tags: [
+            {
+              tag: (order_id || "").toString(),
+              url: "",
+            },
+          ],
+          reminder: `Pedido ${order_id}`,
         },
       }),
     });
@@ -132,7 +181,7 @@ serve(async (req: Request): Promise<Response> => {
 
     const cartItemId = cartData.id;
 
-    // 2. Checkout (pay for the label)
+    // 2. Checkout (pagar etiqueta)
     const checkoutResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/checkout", {
       method: "POST",
       headers: {
@@ -146,14 +195,25 @@ serve(async (req: Request): Promise<Response> => {
       }),
     });
 
+    let checkoutData: any = null;
     if (!checkoutResponse.ok) {
       const errorText = await checkoutResponse.text();
       console.error("Checkout API error:", checkoutResponse.status, errorText);
-      throw new Error(`Failed to checkout: ${errorText}`);
+      // Se saldo insuficiente ou outro erro, devolve rascunho para pagar no painel
+      return new Response(
+        JSON.stringify({
+          success: false,
+          draft: true,
+          melhor_envio_id: cartItemId,
+          message: "Checkout não concluído (provável saldo insuficiente). Pague/gerencie esta etiqueta no painel do Melhor Envio.",
+          details: errorText,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+      );
+    } else {
+      checkoutData = await checkoutResponse.json();
+      console.log("Checkout response:", checkoutData);
     }
-
-    const checkoutData = await checkoutResponse.json();
-    console.log("Checkout response:", checkoutData);
 
     // 3. Generate label
     const generateResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/generate", {
