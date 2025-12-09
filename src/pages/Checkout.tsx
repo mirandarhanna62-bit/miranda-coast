@@ -40,6 +40,7 @@ interface Address {
   neighborhood: string;
   city: string;
   state: string;
+  document: string;
 }
 
 type PaymentMethod = 'pix' | 'card' | 'boleto';
@@ -78,6 +79,7 @@ const Checkout = () => {
     neighborhood: '',
     city: '',
     state: '',
+    document: '',
   });
   
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
@@ -244,8 +246,9 @@ const Checkout = () => {
 
   const handleNextStep = async () => {
     if (step === 1) {
-      if (!address.cep || !address.street || !address.number || !address.neighborhood || !address.city || !address.state) {
-        toast.error('Por favor, preencha todos os campos obrigatórios');
+      const docClean = address.document.replace(/\D/g, '');
+    if (!address.cep || !address.street || !address.number || !address.neighborhood || !address.city || !address.state || docClean.length < 11) {
+      toast.error('Por favor, preencha todos os campos obrigatórios (incluindo CPF/CNPJ válido)');
         return;
       }
       await calculateShipping();
@@ -286,7 +289,10 @@ const Checkout = () => {
           subtotal: cartTotal,
           shipping_cost: selectedShipping.price,
           total: orderTotal,
-          shipping_address: address as any,
+          shipping_address: {
+            ...address,
+            document: address.document.replace(/\D/g, ''),
+          } as any,
           shipping_service: selectedShipping as any,
           status: 'pending',
           payment_status: 'pending',
@@ -467,11 +473,11 @@ const Checkout = () => {
                   <CardTitle className="font-serif">Endereço de Entrega</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2 sm:col-span-1">
-                      <Label htmlFor="cep">CEP *</Label>
-                      <Input
-                        id="cep"
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 sm:col-span-1">
+                    <Label htmlFor="cep">CEP *</Label>
+                    <Input
+                      id="cep"
                         placeholder="00000-000"
                         value={address.cep}
                         onChange={(e) => {
@@ -482,6 +488,19 @@ const Checkout = () => {
                         maxLength={9}
                       />
                     </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="document">CPF/CNPJ *</Label>
+                    <Input
+                      id="document"
+                      placeholder="Somente números"
+                      value={address.document}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 14);
+                        setAddress(prev => ({ ...prev, document: value }));
+                        setPayerDocument(value); // mantém sincronizado com o pagador
+                      }}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="street">Rua *</Label>
