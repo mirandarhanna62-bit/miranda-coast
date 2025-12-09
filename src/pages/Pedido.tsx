@@ -20,10 +20,14 @@ interface OrderItem {
 interface Order {
   id: string;
   status: string;
+  payment_status: string;
+  shipping_status?: string;
   subtotal: number;
   shipping_cost: number;
   total: number;
   shipping_address: {
+    name?: string;
+    document?: string;
     street: string;
     number: string;
     complement?: string;
@@ -86,11 +90,11 @@ const Pedido = () => {
         
         if (itemsError) throw itemsError;
         
-        setOrder({
-          ...orderData,
-          shipping_address: orderData.shipping_address as Order['shipping_address'],
-          shipping_service: orderData.shipping_service as Order['shipping_service'],
-          items: itemsData,
+      setOrder({
+        ...orderData,
+        shipping_address: orderData.shipping_address as Order['shipping_address'],
+        shipping_service: orderData.shipping_service as Order['shipping_service'],
+        items: itemsData,
         });
       } catch (error) {
         console.error('Error fetching order:', error);
@@ -144,10 +148,28 @@ const Pedido = () => {
     });
   };
 
+  const shippingStatusLabel = (status?: string) => {
+    if (!status) return { label: 'Aguardando geraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o da etiqueta', color: 'bg-yellow-100 text-yellow-700' };
+    const normalized = status.toLowerCase();
+    if (normalized.includes('posted') || normalized.includes('postado')) {
+      return { label: 'Postado', color: 'bg-blue-100 text-blue-700' };
+    }
+    if (normalized.includes('delivered')) {
+      return { label: 'Entregue', color: 'bg-green-100 text-green-700' };
+    }
+    if (normalized.includes('canceled')) {
+      return { label: 'Cancelado', color: 'bg-red-100 text-red-700' };
+    }
+    if (normalized.includes('generated') || normalized.includes('gerada')) {
+      return { label: 'Etiqueta gerada', color: 'bg-indigo-100 text-indigo-700' };
+    }
+    return { label: status, color: 'bg-gray-100 text-gray-700' };
+  };
+
   const handlePayWithMercadoPago = async () => {
     if (!order) return;
 
-    // Validação rápida no cliente antes de chamar a função
+    // ValidaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pida no cliente antes de chamar a funÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
     const invalidItem = order.items.find(
       (item) =>
         !item.product_name ||
@@ -157,7 +179,7 @@ const Pedido = () => {
         Number(item.price) <= 0
     );
     if (invalidItem) {
-      toast.error('Itens do pedido inválidos para pagamento (nome, quantidade > 0 e preço > 0 são obrigatórios).');
+      toast.error('Itens do pedido invÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lidos para pagamento (nome, quantidade > 0 e preÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o > 0 sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o obrigatÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rios).');
       return;
     }
     
@@ -212,7 +234,7 @@ const Pedido = () => {
       }
     } catch (error: any) {
       console.error('Payment creation error:', error);
-      // Tentar extrair mensagem detalhada da função edge (Supabase FunctionsHttpError)
+      // Tentar extrair mensagem detalhada da funÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o edge (Supabase FunctionsHttpError)
       try {
         const contextResponse = (error as any)?.context?.response;
         if (contextResponse?.json) {
@@ -246,7 +268,7 @@ const Pedido = () => {
   if (!order) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>Pedido não encontrado</p>
+        <p>Pedido nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o encontrado</p>
       </div>
     );
   }
@@ -302,7 +324,7 @@ const Pedido = () => {
                           {item.color && `Cor: ${item.color}`}
                         </p>
                       )}
-                      <p className="text-sm">Qtd: {item.quantity} × {formatPrice(item.price)}</p>
+                      <p className="text-sm">Qtd: {item.quantity} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {formatPrice(item.price)}</p>
                     </div>
                     <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
                   </div>
@@ -310,18 +332,22 @@ const Pedido = () => {
               </div>
             </div>
 
-            {/* Shipping address */}
+                                    {/* Shipping address */}
             <div>
               <h3 className="font-medium mb-3 flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Endereço de Entrega
+                Endereco de Entrega
               </h3>
               <div className="p-3 bg-secondary/30 rounded-lg">
+                <p className="font-medium">{order.shipping_address.name || 'Cliente'}</p>
                 <p>{order.shipping_address.street}, {order.shipping_address.number}</p>
                 {order.shipping_address.complement && <p>{order.shipping_address.complement}</p>}
                 <p>{order.shipping_address.neighborhood}</p>
                 <p>{order.shipping_address.city} - {order.shipping_address.state}</p>
                 <p>CEP: {order.shipping_address.cep}</p>
+                {order.shipping_address.document && (
+                  <p>Documento: {order.shipping_address.document}</p>
+                )}
               </div>
             </div>
 
@@ -335,18 +361,32 @@ const Pedido = () => {
                 <div className="p-3 bg-secondary/30 rounded-lg">
                   <p className="font-medium">{order.shipping_service.company} - {order.shipping_service.name}</p>
                   <p className="text-sm text-muted-foreground">
-                    Previsão de entrega: {order.shipping_service.delivery_time} dias úteis
+                    Previsao de entrega: {order.shipping_service.delivery_time} dias uteis
                   </p>
                   {order.tracking_code && (
                     <p className="text-sm mt-2">
-                      Código de rastreio: <span className="font-mono">{order.tracking_code}</span>
+                      Codigo de rastreio: <span className="font-mono">{order.tracking_code}</span>
                     </p>
                   )}
+                  {!order.tracking_code && (
+                    <p className="text-sm mt-2 text-muted-foreground">
+                      Rastreio sera exibido aqui apos a geracao da etiqueta.
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
+                    <span className="text-sm">Status do envio:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${shippingStatusLabel(order.shipping_status).color}`}>
+                      {shippingStatusLabel(order.shipping_status).label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    As atualizacoes de envio ficam na aba <strong>Meus Pedidos</strong>. Volte la para acompanhar o rastreamento.
+                  </p>
                 </div>
               </div>
             )}
 
-            {/* Total */}
+            {/* Total */}{/* Total */}{/* Total */}
             <div className="border-t pt-4 space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -382,7 +422,7 @@ const Pedido = () => {
                   ? 'bg-yellow-100 text-yellow-700'
                   : 'bg-red-100 text-red-700'
               }`}>
-                {order.payment_status === 'paid' && 'Pagamento Realizado ✓'}
+                {order.payment_status === 'paid' && 'Pagamento Realizado ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ'}
                 {order.payment_status === 'pending' && 'Pendente'}
                 {order.payment_status === 'failed' && 'Falha'}
               </span>
@@ -391,10 +431,10 @@ const Pedido = () => {
             {order.payment_status === 'pending' && (
               <div className="pt-2">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Escolha sua forma de pagamento. Você será redirecionado para o Mercado Pago de forma segura.
+                  Escolha sua forma de pagamento. VocÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âª serÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ redirecionado para o Mercado Pago de forma segura.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Se o pagamento foi iniciado na tela anterior (Pix/Boleto/Cartão), aguarde a confirmação. Caso queira tentar de novo, volte ao checkout.
+                  Se o pagamento foi iniciado na tela anterior (Pix/Boleto/CartÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o), aguarde a confirmaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o. Caso queira tentar de novo, volte ao checkout.
                 </p>
               </div>
             )}
@@ -402,12 +442,16 @@ const Pedido = () => {
             {order.payment_status === 'paid' && (
               <div className="p-3 bg-green-50 rounded-lg">
                 <p className="text-sm text-green-700">
-                  ✓ Seu pagamento foi processado com sucesso!
+                  ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ Seu pagamento foi processado com sucesso!
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
+
+        <div className="p-4 mb-6 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
+          As atualizacoes de pagamento e envio ficam na aba <strong>Meus Pedidos</strong>. Volte la para acompanhar o status e o rastreio do seu pedido.
+        </div>
 
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Button variant="outline" onClick={() => navigate('/loja')}>

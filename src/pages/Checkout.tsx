@@ -291,6 +291,8 @@ const Checkout = () => {
           total: orderTotal,
           shipping_address: {
             ...address,
+            name: payerName || user?.email || 'Cliente',
+            email: payerEmail,
             document: address.document.replace(/\D/g, ''),
           } as any,
           shipping_service: selectedShipping as any,
