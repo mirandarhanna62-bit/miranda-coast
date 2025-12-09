@@ -1,3 +1,4 @@
+// supabase/functions/create-payment/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -15,6 +16,7 @@ serve(async (req) => {
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     if (!accessToken) {
       console.error("MERCADO_PAGO_ACCESS_TOKEN not configured");
       return new Response(
@@ -39,34 +41,32 @@ serve(async (req) => {
       shipping_cost,
     } = body;
 
-    // Nome do pagador dividido em primeiro e último nome para MP (ex.: boleto requer)
     const payerName: string = payer?.name || "Cliente";
     const nameParts = payerName.trim().split(" ");
     const firstName = payer?.first_name || nameParts.shift() || payerName;
     const lastName = payer?.last_name || nameParts.join(" ") || payerName;
 
-    // Inclui frete (quando houver) no cálculo e envio ao MP
     const shippingAmount = Number(shipping_cost) > 0 ? Number(shipping_cost) : 0;
     const itemsWithShipping = [
       ...items,
       ...(shippingAmount > 0
-        ? [{
-            id: "shipping",
-            title: "Frete",
-            description: "Frete",
-            quantity: 1,
-            unit_price: Math.round(Number(shippingAmount) * 100) / 100,
-          }]
+        ? [
+            {
+              id: "shipping",
+              title: "Frete",
+              description: "Frete",
+              quantity: 1,
+              unit_price: Math.round(Number(shippingAmount) * 100) / 100,
+            },
+          ]
         : []),
     ];
 
     const isPreferenceFlow = !payment_method_id;
 
-    // Detecta método de pagamento
     const isBoleto = payment_method_id?.toLowerCase?.().includes("bol");
     const isCard = !!payment_method_id && !isBoleto && payment_method_id?.toLowerCase?.() !== "pix";
 
-    // Endereço do pagador (obrigatório para boleto)
     const payerAddress = payer?.address || {};
     const boletoAddress =
       payerAddress && {
@@ -78,7 +78,6 @@ serve(async (req) => {
         federal_unit: payerAddress.federal_unit || payerAddress.state || "",
       };
 
-    // Validação mínima para cartão: token obrigatório
     if (isCard && !token) {
       return new Response(
         JSON.stringify({ error: "Cartão: token não recebido do frontend. Gere o token antes de pagar." }),
@@ -86,7 +85,6 @@ serve(async (req) => {
       );
     }
 
-    // Validação mínima para boleto: endereço obrigatório
     if (
       isBoleto &&
       (!boletoAddress ||
@@ -97,7 +95,8 @@ serve(async (req) => {
     ) {
       return new Response(
         JSON.stringify({
-          error: "Boleto: endereço do pagador incompleto. Envie zip_code, street_name, street_number, city, federal_unit.",
+          error:
+            "Boleto: endereço do pagador incompleto. Envie zip_code, street_name, street_number, city, federal_unit.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
@@ -112,8 +111,7 @@ serve(async (req) => {
     ) {
       return new Response(
         JSON.stringify({
-          error:
-            "Missing required fields: items (array), payer, external_reference",
+          error: "Missing required fields: items (array), payer, external_reference",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
@@ -148,7 +146,6 @@ serve(async (req) => {
       requestUrlOrigin ||
       "https://example.com";
 
-    // Recomendação do MP: usar idempotência para evitar cobranças duplicadas
     const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : `${external_reference}-${Date.now()}`;
 
     if (isPreferenceFlow) {
@@ -292,12 +289,12 @@ serve(async (req) => {
 
       console.log("Payment created:", data.id, data.status);
 
-      // Atualiza pedido com o status inicial e o id do pagamento
       if (supabaseUrl && supabaseServiceKey) {
         try {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
-          let payment_status: string = "pending";
-          let status: string = "pending";
+          let payment_status = "pending";
+          let status = "pending";
+
           if (data.status === "approved") {
             payment_status = "paid";
             status = "confirmed";
