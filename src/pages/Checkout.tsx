@@ -1,4 +1,3 @@
-// src/pages/Checkout.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -461,6 +460,8 @@ const Checkout = () => {
         },
       });
 
+      console.log("PaymentData (create-payment):", { paymentData, paymentError });
+
       if (paymentError) {
         console.error("Payment error:", paymentError);
         toast.error("Pedido criado, mas houve erro ao iniciar o pagamento. Tente novamente.");
@@ -473,7 +474,10 @@ const Checkout = () => {
       if (paymentData?.error) {
         console.error("Payment creation error:", paymentData);
         toast.error(
-          paymentData.error || "Não foi possível iniciar o pagamento. Acesse o pedido para tentar novamente.",
+          paymentData.status_detail
+            ? `Pagamento rejeitado: ${paymentData.status_detail}`
+            : paymentData.error ||
+              "Não foi possível iniciar o pagamento. Acesse o pedido para tentar novamente.",
         );
         navigate("/pedido/" + order.id);
         setIsLoading(false);

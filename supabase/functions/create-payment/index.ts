@@ -1,4 +1,3 @@
-// supabase/functions/create-payment/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -287,7 +286,36 @@ serve(async (req) => {
         );
       }
 
-      console.log("Payment created:", data.id, data.status);
+      console.log(
+        "Payment created:",
+        data.id,
+        "status:",
+        data.status,
+        "status_detail:",
+        data.status_detail,
+      );
+
+      if (data.status === "rejected") {
+        console.error(
+          "Payment rejected by MP:",
+          JSON.stringify({
+            id: data.id,
+            status: data.status,
+            status_detail: data.status_detail,
+            cause: data.cause,
+          }),
+        );
+
+        return new Response(
+          JSON.stringify({
+            error: "Pagamento rejeitado pelo Mercado Pago",
+            status: data.status,
+            status_detail: data.status_detail,
+            details: data,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+        );
+      }
 
       if (supabaseUrl && supabaseServiceKey) {
         try {
@@ -298,7 +326,7 @@ serve(async (req) => {
           if (data.status === "approved") {
             payment_status = "paid";
             status = "confirmed";
-          } else if (data.status === "rejected" || data.status === "cancelled") {
+          } else if (data.status === "cancelled") {
             payment_status = "failed";
             status = "failed";
           }
