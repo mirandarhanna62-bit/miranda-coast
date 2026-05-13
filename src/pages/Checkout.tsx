@@ -122,6 +122,8 @@ const Checkout = () => {
   const [cardFormError, setCardFormError] = useState("");
   const mpRef = useRef<any>(null);
   const cardFormRef = useRef<any>(null);
+  const paymentHandledRef = useRef(false);
+  const redirectTimerRef = useRef<number | null>(null);
   const [mpScriptLoaded, setMpScriptLoaded] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -156,6 +158,65 @@ const Checkout = () => {
       toast.error("Seu carrinho está vazio");
     }
   }, [cartItems, cartLoading, user, navigate, orderId, paymentResult]);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!orderId || !user || !paymentResult || paymentHandledRef.current) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const checkOrderPayment = async () => {
+      attempts += 1;
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("payment_status,status")
+        .eq("id", orderId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (cancelled || error || !data) return;
+
+      if (data.payment_status === "paid") {
+        paymentHandledRef.current = true;
+        setPaymentResult((current: any) => current ? { ...current, status: "approved" } : current);
+        toast.success("Compra efetuada com sucesso!");
+
+        redirectTimerRef.current = window.setTimeout(() => {
+          navigate("/meus-pedidos");
+        }, 1400);
+        return;
+      }
+
+      if (data.payment_status === "failed" || data.status === "failed") {
+        paymentHandledRef.current = true;
+        toast.error("Pagamento recusado. Confira o pedido e tente novamente.");
+        navigate("/pedido/" + orderId);
+      }
+    };
+
+    void checkOrderPayment();
+    const interval = window.setInterval(() => {
+      if (attempts >= 40 || paymentHandledRef.current) {
+        window.clearInterval(interval);
+        return;
+      }
+      void checkOrderPayment();
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [orderId, user, paymentResult, navigate]);
 
   const calculateDiscount = (coupon: any) => {
     if (!coupon) return 0;
