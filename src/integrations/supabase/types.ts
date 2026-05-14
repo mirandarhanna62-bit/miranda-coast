@@ -446,6 +446,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_expired_pending_orders: {
+        Args: {
+          _older_than?: string
+        }
+        Returns: number
+      }
+      admin_delete_expired_pending_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       app_role: "admin" | "user"

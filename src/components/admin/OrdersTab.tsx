@@ -82,6 +82,13 @@ export const OrdersTab = () => {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
+      const { data: deletedCount, error: cleanupError } = await supabase.rpc('admin_delete_expired_pending_orders');
+      if (cleanupError) {
+        console.warn('Expired pending orders cleanup failed:', cleanupError.message);
+      } else if (deletedCount && deletedCount > 0) {
+        toast.info(`${deletedCount} pedido(s) pendente(s) vencido(s) foram removidos.`);
+      }
+
       const { data, error } = await supabase
         .from('orders')
         .select('*, order_items(*)')
