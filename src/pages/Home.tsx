@@ -15,16 +15,16 @@ import { getOptimizedSupabaseImageUrl, preloadImage } from "@/lib/image-url";
 const HERO_SETTINGS_CACHE_KEY = "miranda-coast:hero-settings";
 
 const getCachedHeroSettings = () => {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") return undefined;
 
   try {
     const cached = window.localStorage.getItem(HERO_SETTINGS_CACHE_KEY);
-    if (!cached) return null;
+    if (!cached) return undefined;
 
     const parsed = JSON.parse(cached);
-    return parsed?.image_url ? parsed : null;
+    return parsed?.image_url ? parsed : undefined;
   } catch {
-    return null;
+    return undefined;
   }
 };
 
