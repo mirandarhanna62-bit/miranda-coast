@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import RouteSEO from "@/components/RouteSEO";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,12 +20,15 @@ const Sobre = lazy(() => import("./pages/Sobre"));
 const Contato = lazy(() => import("./pages/Contato"));
 const Rastreamento = lazy(() => import("./pages/Rastreamento"));
 const PoliticaTroca = lazy(() => import("./pages/PoliticaTroca"));
+const PoliticaPrivacidade = lazy(() => import("./pages/PoliticaPrivacidade"));
+const PoliticaCookies = lazy(() => import("./pages/PoliticaCookies"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const Pedido = lazy(() => import("./pages/Pedido"));
 const MeusPedidos = lazy(() => import("./pages/MeusPedidos"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const CookieConsent = lazy(() => import("./components/CookieConsent"));
 
 const queryClient = new QueryClient();
 
@@ -88,6 +92,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollToTop />
           <SupabaseAuthRedirectHandler />
+          <RouteSEO />
           <div className="flex flex-col min-h-screen">
             <Navbar />
             <main className="flex-1">
@@ -102,6 +107,8 @@ const App = () => (
                     <Route path="/contato" element={<Contato />} />
                     <Route path="/rastreamento" element={<Rastreamento />} />
                     <Route path="/politica-troca" element={<PoliticaTroca />} />
+                    <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                    <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/pedido/:id" element={<Pedido />} />
@@ -114,6 +121,9 @@ const App = () => (
             </main>
             <Footer />
           </div>
+          <Suspense fallback={null}>
+            <CookieConsent />
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

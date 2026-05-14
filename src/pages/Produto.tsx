@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import SEO, { SITE_URL } from '@/components/SEO';
+import { getOptimizedSupabaseImageUrl } from '@/lib/image-url';
 import { Loader2, ShoppingCart, ArrowLeft, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -218,9 +220,45 @@ const ProductDetails = () => {
   const discountPercentage = hasDiscount
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : 0;
+  const productImage =
+    product.images && product.images.length > 0
+      ? getOptimizedSupabaseImageUrl(product.images[0], { width: 1200, quality: 82 })
+      : undefined;
+  const productUrl = `${SITE_URL}/produto/${product.id}`;
+  const productDescription =
+    product.description || `${product.name} na Miranda Coast. Moda feminina delicada e moderna.`;
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.images || undefined,
+    description: productDescription,
+    sku: product.id,
+    category: product.category || undefined,
+    brand: {
+      "@type": "Brand",
+      name: "Miranda Coast",
+    },
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "BRL",
+      price: Number(product.price).toFixed(2),
+      availability: availableStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      itemCondition: "https://schema.org/NewCondition",
+    },
+  };
 
   return (
-    <div className="min-h-screen pt-24 pb-12">
+    <>
+      <SEO
+        title={`${product.name} | Miranda Coast`}
+        description={productDescription}
+        canonicalPath={`/produto/${product.id}`}
+        image={productImage}
+        jsonLd={productJsonLd}
+      />
+      <div className="min-h-screen pt-24 pb-12">
       <div className="container max-w-6xl px-4">
         {/* Back button */}
         <Button
@@ -479,7 +517,8 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

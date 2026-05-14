@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
 import { Instagram, Facebook, Mail } from "lucide-react";
+import { COOKIE_PREFERENCES_EVENT } from "@/lib/cookie-consent";
+
+const openCookiePreferences = () => {
+  window.dispatchEvent(new Event(COOKIE_PREFERENCES_EVENT));
+};
 
 const Footer = () => {
   return (
@@ -60,6 +65,25 @@ const Footer = () => {
                 <Link to="/politica-troca" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
                   Trocas e devoluções
                 </Link>
+              </li>
+              <li>
+                <Link to="/politica-de-privacidade" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
+                  Privacidade
+                </Link>
+              </li>
+              <li>
+                <Link to="/politica-de-cookies" className="text-sm text-muted-foreground hover:text-primary transition-smooth">
+                  Cookies
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={openCookiePreferences}
+                  className="text-sm text-muted-foreground hover:text-primary transition-smooth"
+                >
+                  Gerenciar cookies
+                </button>
               </li>
             </ul>
           </div>
