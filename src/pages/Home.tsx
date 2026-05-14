@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -28,10 +28,27 @@ const getCachedHeroSettings = () => {
   }
 };
 
+const HeroSplash = () => (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background">
+    <div className="notranslate flex flex-col items-center gap-5" data-no-translate translate="no">
+      <div className="relative flex h-20 w-20 items-center justify-center">
+        <div className="absolute inset-0 rounded-full border border-primary/20" />
+        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-primary animate-spin" />
+        <Waves className="h-9 w-9 text-primary" />
+      </div>
+      <div className="text-center">
+        <p className="font-serif text-3xl text-primary">Miranda Coast</p>
+        <p className="mt-2 text-sm text-muted-foreground">Carregando coleção</p>
+      </div>
+    </div>
+  </div>
+);
+
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const [heroImageReady, setHeroImageReady] = useState(false);
 
   const { data: heroSettings, isLoading: heroLoading } = useQuery({
     queryKey: ['hero-settings'],
@@ -76,6 +93,36 @@ const Home = () => {
       preloadImage(optimizedHeroImage);
     }
   }, [optimizedHeroImage]);
+
+  useEffect(() => {
+    if (!optimizedHeroImage) {
+      if (!heroLoading) setHeroImageReady(true);
+      return;
+    }
+
+    setHeroImageReady(false);
+
+    let cancelled = false;
+    const image = new Image();
+    const fallbackTimer = window.setTimeout(() => {
+      if (!cancelled) setHeroImageReady(true);
+    }, 6000);
+
+    image.onload = () => {
+      if (!cancelled) setHeroImageReady(true);
+    };
+    image.onerror = () => {
+      if (!cancelled) setHeroImageReady(true);
+    };
+    image.src = optimizedHeroImage;
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [optimizedHeroImage, heroLoading]);
+
+  const showHeroSplash = heroLoading || !heroImageReady;
 
   const defaultCategories = [
     { name: "Vestidos", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&q=80" },
@@ -180,6 +227,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen">
+      {showHeroSplash && <HeroSplash />}
       {/* Hero Section */}
       <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-muted">
@@ -191,6 +239,8 @@ const Home = () => {
               loading="eager"
               fetchPriority="high"
               decoding="async"
+              onLoad={() => setHeroImageReady(true)}
+              onError={() => setHeroImageReady(true)}
             />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-b from-primary/30 via-primary/20 to-background/90" />
