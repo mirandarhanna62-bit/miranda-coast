@@ -186,6 +186,13 @@ export const OrdersTab = () => {
     setLabelDialog(true);
   };
 
+  const canGenerateLabel = (order: Order) =>
+    ['approved', 'paid'].includes(order.payment_status) &&
+    !order.melhor_envio_id &&
+    !order.shipping_label_url &&
+    !order.shipping_service?.pickup &&
+    order.shipping_service?.id !== 'pickup';
+
   return (
     <Card>
       <CardHeader>
@@ -265,7 +272,17 @@ export const OrdersTab = () => {
                       <Eye className="h-4 w-4 mr-1" />
                       Detalhes
                     </Button>
-                    {(['approved', 'paid'].includes(order.payment_status)) && !order.tracking_code && !order.shipping_service?.pickup && order.shipping_service?.id !== 'pickup' && (
+                    {order.shipping_label_url && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(order.shipping_label_url!, '_blank')}
+                      >
+                        <Printer className="h-4 w-4 mr-1" />
+                        Abrir etiqueta
+                      </Button>
+                    )}
+                    {canGenerateLabel(order) && (
                       <Button size="sm" onClick={() => openLabelDialog(order)}>
                         <Printer className="h-4 w-4 mr-1" />
                         Etiqueta

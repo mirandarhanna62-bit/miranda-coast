@@ -83,6 +83,26 @@ serve(async (req: Request): Promise<Response> => {
       return json({ error: "Pedidos de retirada na loja nao precisam de etiqueta" }, 400);
     }
 
+    if (order.shipping_label_url) {
+      return json({
+        success: true,
+        already_exists: true,
+        label_url: order.shipping_label_url,
+        tracking_code: order.tracking_code || null,
+        melhor_envio_id: order.melhor_envio_id || null,
+      });
+    }
+
+    if (order.melhor_envio_id) {
+      return json({
+        success: false,
+        draft: true,
+        already_exists: true,
+        melhor_envio_id: order.melhor_envio_id,
+        message: "Este pedido ja possui uma etiqueta/rascunho no Melhor Envio. Finalize ou imprima pelo painel do Melhor Envio para evitar cobranca duplicada.",
+      });
+    }
+
     const serviceToUse = Number(shippingService.id || shippingService.service_id);
     if (!serviceToUse) {
       return json({ error: "Servico de frete nao encontrado no pedido" }, 400);
@@ -186,6 +206,15 @@ serve(async (req: Request): Promise<Response> => {
       return json({ error: "Melhor Envio nao retornou o id da etiqueta" }, 502);
     }
 
+    await supabase
+      .from("orders")
+      .update({
+        melhor_envio_id: cartItemId,
+        shipping_status: "draft",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", order_id);
+
     const checkoutResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/checkout", {
       method: "POST",
       headers,
@@ -213,6 +242,14 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    await supabase
+      .from("orders")
+      .update({
+        shipping_status: "checkout_paid",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", order_id);
+
     const generateResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/generate", {
       method: "POST",
       headers,
@@ -224,6 +261,14 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Melhor Envio generate error", generateResponse.status, errorText);
       return json({ error: "Nao foi possivel gerar a etiqueta", details: errorText }, 502);
     }
+
+    await supabase
+      .from("orders")
+      .update({
+        shipping_status: "label_generated",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", order_id);
 
     const printResponse = await fetch("https://www.melhorenvio.com.br/api/v2/me/shipment/print", {
       method: "POST",
