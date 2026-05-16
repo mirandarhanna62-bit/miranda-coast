@@ -49,8 +49,3 @@ $$;
 
 REVOKE ALL ON FUNCTION public.admin_delete_expired_pending_orders() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.admin_delete_expired_pending_orders() TO authenticated;
-
-CREATE INDEX IF NOT EXISTS orders_pending_cleanup_idx
-  ON public.orders(created_at)
-  WHERE COALESCE(payment_status, 'pending') = 'pending'
-    AND status = 'pending';
